@@ -30,5 +30,14 @@ $stmt->execute();
 $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Output data as JSON
-header('Content-Type: application/json');
-echo json_encode($data);
+// Output data as JSON
+if (empty($data)) {
+  // Respond with a message indicating no data
+  header('Content-Type: application/json');
+  http_response_code(404);
+  echo json_encode(array("message" => "No data found"));
+} else {
+  // Output data as JSON
+  header('Content-Type: application/json');
+  echo json_encode($data);
+}

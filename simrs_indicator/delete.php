@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($input_data['id'])) {
   $id = $input_data['id'];
 
   // Prepare the delete query
-  $query = "DELETE FROM simrs_menu WHERE id = :id";
+  $query = "DELETE FROM simrs_indicator WHERE id = :id";
 
   // Prepare the query
   $stmt = $pdo->prepare($query);
