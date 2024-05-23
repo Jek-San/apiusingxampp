@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT' && !empty($input_data)) {
     $pdo->beginTransaction();
 
     // Define required fields
-    $required_fields = ['id', 'name'];
+    $required_fields = ['id', 'indicator_id', 'n_name', 'd_name'];
 
     // Check if all required fields are present
     $missing_fields = array_diff($required_fields, array_keys($input_data));
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT' && !empty($input_data)) {
     }
 
     // Prepare the update query
-    $update_query = "UPDATE simrs_indicator SET ";
+    $update_query = "UPDATE simrs_naming SET ";
     $params = [];
 
     // Dynamically build the SET clause and collect parameters

@@ -16,7 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT' && !empty($input_data)) {
     $pdo->beginTransaction();
 
     // Define required fields
-    $required_fields = ['id', 'name'];
+    $required_fields = ['id', 'name', 'menu_id'];
 
     // Check if all required fields are present
     $missing_fields = array_diff($required_fields, array_keys($input_data));

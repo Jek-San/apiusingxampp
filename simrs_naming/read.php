@@ -1,28 +1,32 @@
 <?php
 
 // Include the database connection functions
-require_once("config.php");
 require_once("db.php");
-
 
 // Establish database connection using PDO
 $pdo = connectToDatabase();
 
 // Construct the base SQL query
-$query = "SELECT * FROM simrs_unit WHERE 1";
+$query = "SELECT * FROM simrs_naming WHERE 1";
 
 // Check if the 'id' parameter is provided in the GET request
 if (isset($_GET['id'])) {
   // Add a WHERE clause to filter by ID
   $query .= " AND id = :id";
 }
-
+if (isset($_GET['indicator_id'])) {
+  // Add a WHERE clause to filter by ID
+  $query .= " AND indicator_id = :indicator_id";
+}
 // Prepare the query
 $stmt = $pdo->prepare($query);
 
 // Bind parameters if necessary
 if (isset($_GET['id'])) {
   $stmt->bindParam(':id', $_GET['id'], PDO::PARAM_INT);
+}
+if (isset($_GET['indicator_id'])) {
+  $stmt->bindParam(':indicator_id', $_GET['indicator_id'], PDO::PARAM_INT);
 }
 
 // Execute the query
@@ -31,7 +35,6 @@ $stmt->execute();
 // Fetch data as associative array
 $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Output data as JSON
 // Output data as JSON
 if (empty($data)) {
   // Respond with a message indicating no data
