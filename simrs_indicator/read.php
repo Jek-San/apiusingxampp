@@ -7,7 +7,7 @@ require_once("db.php");
 $pdo = connectToDatabase();
 
 // Construct the base SQL query
-$query = "SELECT * FROM simrs_indicator WHERE 1";
+$query = "SELECT * FROM simrs_indicator WHERE 1 AND is_active=1";
 
 // Check if the 'id' parameter is provided in the GET request
 if (isset($_GET['id'])) {

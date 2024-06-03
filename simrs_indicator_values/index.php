@@ -30,6 +30,6 @@ switch ($request_method) {
   default:
     // Invalid request method
     http_response_code(405);
-    echo "Method Not Allowed";
+    echo "Method Not Allowedddd";
     break;
 }

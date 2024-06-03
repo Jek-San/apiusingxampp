@@ -2,47 +2,99 @@
 
 // Include the database connection functions
 require_once("db.php");
-require_once('config.php');
+require("config.php");
 
 // Establish database connection using PDO
 $pdo = connectToDatabase();
 
-// Assuming you are passing data to create via JSON in the request body
+// Assuming you are passing data to update via JSON in the request body
 $input_data = json_decode(file_get_contents('php://input'), true);
 
-// Check if the required data is present
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($input_data['name']) && isset($input_data['menu_id'])) {
-  // Extract data from the JSON body
-  $name = $input_data['name'];
-  $menu_id = $input_data['menu_id'];
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($input_data)) {
+  // Begin transaction
+  $pdo->beginTransaction();
 
-  // Prepare the insert query
-  $query = "INSERT INTO simrs_indicator (name, menu_id) VALUES (:name, :menu_id)";
-  // Prepare the query
-  $stmt = $pdo->prepare($query);
+  foreach ($input_data as $indicator_data) {
+    $indicator_id = $indicator_data['indicator_id'];
+    $indicator_name = $indicator_data['name'];
+    $menu_id = isset($indicator_data['menu_id']) ? $indicator_data['menu_id'] : null;  // Check if 'menu_id' exists
 
-  // Bind parameters
-  $stmt->bindParam(':name', $name, PDO::PARAM_STR);
-  $stmt->bindParam(':menu_id', $menu_id, PDO::PARAM_INT); // Fix the variable name here
+    if ($menu_id === null) {
+      $pdo->rollBack();
+      http_response_code(400);
+      echo json_encode(array("message" => "menu_id is required"));
+      exit();
+    }
 
-  // Execute the query
-  $stmt->execute();
+    $indicator_query = "SELECT id FROM simrs_indicator WHERE id = :indicator_id";
+    $indicator_stmt = $pdo->prepare($indicator_query);
+    $indicator_stmt->bindValue(':indicator_id', $indicator_id);
+    $indicator_stmt->execute();
+    $existing_indicator = $indicator_stmt->fetch(PDO::FETCH_ASSOC);
 
-  // Check if the insert was successful
-  if ($stmt->rowCount() > 0) {
-    // Get the ID of the newly inserted record
-    $new_id = $pdo->lastInsertId();
+    if (!$existing_indicator) {
+      $insert_indicator_query = "INSERT INTO simrs_indicator (id, name, menu_id) VALUES (:indicator_id, :name, :menu_id)";
+      $insert_indicator_stmt = $pdo->prepare($insert_indicator_query);
+      $insert_indicator_stmt->bindValue(':indicator_id', $indicator_id);
+      $insert_indicator_stmt->bindValue(':name', $indicator_name);
+      $insert_indicator_stmt->bindValue(':menu_id', $menu_id);
+      if (!$insert_indicator_stmt->execute()) {
+        $pdo->rollBack();
+        http_response_code(500);
+        echo json_encode(array("message" => "Error inserting indicator"));
+        exit();
+      }
+    }
 
-    // Return success response with the ID of the newly created record
-    http_response_code(201);
-    echo json_encode(array("message" => "Record created successfully", "id" => $new_id));
-  } else {
-    // Return error response if the insert operation fails
-    http_response_code(500);
-    echo json_encode(array("message" => "Failed to create record"));
+    foreach (['N', 'D'] as $type) {
+      $values = $indicator_data['values'][$type]['data'];
+      foreach ($values as $value) {
+        $date = $value['date'];
+        $value = $value['value'];
+
+        $existing_value_query = "SELECT * FROM simrs_indicator_values WHERE indicator_id = :indicator_id AND date = :date AND type = :type";
+        $existing_value_stmt = $pdo->prepare($existing_value_query);
+        $existing_value_stmt->bindValue(':indicator_id', $indicator_id);
+        $existing_value_stmt->bindValue(':date', $date);
+        $existing_value_stmt->bindValue(':type', $type);
+        $existing_value_stmt->execute();
+        $existing_value = $existing_value_stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existing_value) {
+          $update_value_query = "UPDATE simrs_indicator_values SET value = :value WHERE indicator_id = :indicator_id AND date = :date AND type = :type";
+          $update_value_stmt = $pdo->prepare($update_value_query);
+          $update_value_stmt->bindValue(':value', $value);
+          $update_value_stmt->bindValue(':indicator_id', $indicator_id);
+          $update_value_stmt->bindValue(':date', $date);
+          $update_value_stmt->bindValue(':type', $type);
+          if (!$update_value_stmt->execute()) {
+            $pdo->rollBack();
+            http_response_code(500);
+            echo json_encode(array("message" => "Error updating value"));
+            exit();
+          }
+        } else {
+          $insert_value_query = "INSERT INTO simrs_indicator_values (indicator_id, date, value, type) VALUES (:indicator_id, :date, :value, :type)";
+          $insert_value_stmt = $pdo->prepare($insert_value_query);
+          $insert_value_stmt->bindValue(':indicator_id', $indicator_id);
+          $insert_value_stmt->bindValue(':date', $date);
+          $insert_value_stmt->bindValue(':value', $value);
+          $insert_value_stmt->bindValue(':type', $type);
+          if (!$insert_value_stmt->execute()) {
+            $pdo->rollBack();
+            http_response_code(500);
+            echo json_encode(array("message" => "Error inserting value"));
+            exit();
+          }
+        }
+      }
+    }
   }
+
+  $pdo->commit();
+  http_response_code(200);
+  echo json_encode(array("message" => "Data updated successfully"));
 } else {
-  // Return error response if the request method is not POST or required data is missing
   http_response_code(400);
-  echo json_encode(array("message" => "Invalid request or missing required data"));
+  echo json_encode(array("message" => "Invalid request or empty input data"));
 }

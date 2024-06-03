@@ -15,7 +15,7 @@ if ($menu_id !== null) {
   // Prepare the query to fetch indicators for the provided menu ID
   $query = "SELECT i.id AS id, i.name AS name
               FROM simrs_indicator i
-              WHERE i.menu_id = :menu_id";
+              WHERE i.menu_id = :menu_id AND is_active=1";
 
   // Execute the query
   $stmt = $pdo->prepare($query);

@@ -1,0 +1,8 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    <LimitExcept GET POST PUT DELETE OPTIONS>
+        Require all granted
+    </LimitExcept>
+</IfModule>

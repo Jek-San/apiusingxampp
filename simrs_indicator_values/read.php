@@ -6,32 +6,27 @@ require_once("db.php");
 // Establish database connection using PDO
 $pdo = connectToDatabase();
 
-// Check if the 'menu_id' and 'month_index' parameters are provided in the GET request
+// Check if the 'menu_id', 'month_index', and 'year' parameters are provided in the GET request
 if (isset($_GET['menu_id']) && isset($_GET['month_index']) && isset($_GET['year'])) {
   // Extract month index, add 1 to match PHP's date format where January is 1
   $monthIndex = intval($_GET['month_index']) + 1;
   $year = intval($_GET['year']);
 
   // Construct the SQL query to retrieve indicators based on menu_id and month
-  $query = "SELECT  si.id AS indicator_id,
-                    si.name AS name,
-                    sn.n_name AS n_name,
-                    sn.d_name AS d_name,
-                    siv.date AS date,
-                    siv.value AS value,
-                    siv.type AS type
-            FROM 
-                    simrs_indicator si
-            INNER JOIN 
-                    simrs_menu sm ON si.menu_id = sm.id
-            INNER JOIN 
-                    simrs_naming sn ON si.id = sn.indicator_id
-            LEFT JOIN 
-                    simrs_indicator_values siv ON sn.indicator_id = siv.indicator_id
-                                            AND MONTH(siv.date) = :month
-                                            AND YEAR(siv.date) = :year
-            WHERE 
-                    sm.id = :menu_id";
+  $query = "SELECT si.id AS indicator_id,
+                     si.name AS name,
+                     sn.n_name AS n_name,
+                     sn.d_name AS d_name,
+                     siv.date AS date,
+                     siv.value AS value,
+                     siv.type AS type
+              FROM simrs_indicator si
+              INNER JOIN simrs_menu sm ON si.menu_id = sm.id
+              INNER JOIN simrs_naming sn ON si.id = sn.indicator_id
+              LEFT JOIN simrs_indicator_values siv ON sn.indicator_id = siv.indicator_id
+                                               AND MONTH(siv.date) = :month
+                                               AND YEAR(siv.date) = :year
+              WHERE sm.id = :menu_id AND si.is_active = 1";  // Only include active indicators
 } else {
   // If any required parameter is missing, respond with an error message
   header('Content-Type: application/json');
@@ -79,6 +74,7 @@ foreach ($data as $row) {
     $result[$indicatorId] = array(
       "indicator_id" => $indicatorId,
       "name" => $indicatorName,
+      "menu_id" => $_GET['menu_id'],
       "values" => array(
         "N" => array(
           "n_name" => $nName,
@@ -119,29 +115,6 @@ foreach ($result as &$indicator) {
   }
 }
 unset($indicator); // Unset reference variable to avoid accidental modification
-
-// Check for indicators without any data values and add them to the result array
-$indicatorIds = array_column($data, 'indicator_id');
-$missingIndicators = array_diff(array_unique($indicatorIds), array_keys($result));
-foreach ($missingIndicators as $missingIndicator) {
-  $result[$missingIndicator] = array(
-    "indicator_id" => $missingIndicator,
-    "name" => "",
-    "values" => array(
-      "N" => array(
-        "n_name" => "",
-        "data" => array(),
-        "sumN" => 0 // Initialize sumN to 0 for missing indicators
-      ),
-      "D" => array(
-        "d_name" => "",
-        "data" => array(),
-        "sumD" => 0 // Initialize sumD to 0 for missing indicators
-      ),
-      "percentageRatio" => 0 // Initialize percentageRatio to 0 for missing indicators
-    )
-  );
-}
 
 // Output data as JSON
 header('Content-Type: application/json');
